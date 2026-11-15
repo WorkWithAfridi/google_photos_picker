@@ -43,7 +43,10 @@ void main() {
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
 
-    expect(launchedUri, Uri.parse('https://photos.google.com/picker/abc'));
+    expect(
+      launchedUri,
+      Uri.parse('https://photos.google.com/picker/abc/autoclose'),
+    );
     expect(service.maxItemCount, 3);
     expect(service.deletedSession, 'abc');
     expect(find.text('Open'), findsOneWidget);
@@ -151,10 +154,6 @@ class _TransientPollingService extends _ReadyService {
     if (pollCount == 1) {
       throw http.ClientException('Temporary DNS failure');
     }
-    return GooglePhotosPickingSession(
-      id: sessionId,
-      pickerUri: Uri.parse('https://photos.google.com/picker/$sessionId'),
-      mediaItemsSet: true,
-    );
+    return GooglePhotosPickingSession(id: sessionId, mediaItemsSet: true);
   }
 }

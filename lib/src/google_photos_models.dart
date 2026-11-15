@@ -19,30 +19,36 @@ final class GooglePhotosPollingConfig {
 final class GooglePhotosPickingSession {
   const GooglePhotosPickingSession({
     required this.id,
-    required this.pickerUri,
     required this.mediaItemsSet,
+    this.pickerUri,
     this.pollingConfig,
     this.expireTime,
   });
 
   final String id;
-  final Uri pickerUri;
+
+  /// URI used to open the hosted picker.
+  ///
+  /// Google omits this after [mediaItemsSet] becomes `true`.
+  final Uri? pickerUri;
   final bool mediaItemsSet;
   final GooglePhotosPollingConfig? pollingConfig;
   final DateTime? expireTime;
 
   factory GooglePhotosPickingSession.fromJson(Map<String, Object?> json) {
     final String? id = json['id'] as String?;
-    final String? pickerUri = json['pickerUri'] as String?;
-    if (id == null || pickerUri == null) {
+    if (id == null) {
       throw const FormatException(
-        'Google Photos returned a session without an ID or picker URI.',
+        'Google Photos returned a session without an ID.',
       );
     }
     final Object? pollingConfig = json['pollingConfig'];
     return GooglePhotosPickingSession(
       id: id,
-      pickerUri: Uri.parse(pickerUri),
+      pickerUri: switch (json['pickerUri']) {
+        final String value => Uri.parse(value),
+        _ => null,
+      },
       mediaItemsSet: json['mediaItemsSet'] as bool? ?? false,
       pollingConfig:
           pollingConfig is Map<String, Object?>

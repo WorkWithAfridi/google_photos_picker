@@ -135,11 +135,17 @@ class _GooglePhotosPickerScreenState extends State<GooglePhotosPickerScreen> {
       final GooglePhotosPickingSession initial = await widget.service
           .createSession(maxItemCount: widget.options.maxItems);
       sessionId = initial.id;
-      _pickerUri = initial.pickerUri;
+      final Uri? pickerUri = initial.pickerUri;
+      if (pickerUri == null) {
+        throw const FormatException(
+          'Google Photos created a session without a picker URI.',
+        );
+      }
+      _pickerUri = _autocloseUri(pickerUri);
       if (_cancelled) return;
       setState(() => _status = 'Waiting for your selection…');
 
-      if (!await _launch(initial.pickerUri)) {
+      if (!await _launch(_pickerUri!)) {
         throw const GooglePhotosApiException(
           'No application could open the Google Photos picker.',
         );
@@ -222,6 +228,17 @@ class _GooglePhotosPickerScreenState extends State<GooglePhotosPickerScreen> {
     final GooglePhotosUriLauncher? launcher = widget.uriLauncher;
     if (launcher != null) return launcher(uri);
     return launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  Uri _autocloseUri(Uri uri) {
+    if (uri.pathSegments.isNotEmpty && uri.pathSegments.last == 'autoclose') {
+      return uri;
+    }
+    final String path =
+        uri.path.endsWith('/')
+            ? '${uri.path}autoclose'
+            : '${uri.path}/autoclose';
+    return uri.replace(path: path);
   }
 
   Future<void> _openPicker() async {

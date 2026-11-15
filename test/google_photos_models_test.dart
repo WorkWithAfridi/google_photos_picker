@@ -24,6 +24,18 @@ void main() {
     expect(session.expireTime, DateTime.utc(2026, 11, 15, 12));
   });
 
+  test('accepts a completed session without a picker URI', () {
+    final GooglePhotosPickingSession session =
+        GooglePhotosPickingSession.fromJson(<String, Object?>{
+          'id': 'session-1',
+          'mediaItemsSet': true,
+        });
+
+    expect(session.id, 'session-1');
+    expect(session.mediaItemsSet, isTrue);
+    expect(session.pickerUri, isNull);
+  });
+
   test('parses selected photo metadata', () {
     final GooglePhotosMediaItem item = GooglePhotosMediaItem.fromJson(
       <String, Object?>{
