@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_photos_picker/google_photos_picker.dart';
+import 'package:http/http.dart' as http;
 
 void main() {
   testWidgets('opens the hosted picker and cleans up a completed session', (
@@ -65,6 +66,26 @@ void main() {
     expect(find.text('Picker API is disabled.'), findsOneWidget);
     expect(find.text('Try again'), findsOneWidget);
   });
+
+  testWidgets('keeps polling after a transient network failure', (
+    WidgetTester tester,
+  ) async {
+    final _TransientPollingService service = _TransientPollingService();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GooglePhotosPickerScreen(
+          service: service,
+          uriLauncher: (_) async => true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(service.pollCount, 2);
+    expect(service.deletedSession, 'abc');
+    expect(find.text('Couldn’t open Google Photos'), findsNothing);
+  });
 }
 
 class _ReadyService implements GooglePhotosService {
@@ -105,5 +126,35 @@ class _FailingService extends _ReadyService {
   @override
   Future<GooglePhotosPickingSession> createSession({int? maxItemCount}) {
     throw const GooglePhotosApiException('Picker API is disabled.');
+  }
+}
+
+class _TransientPollingService extends _ReadyService {
+  int pollCount = 0;
+
+  @override
+  Future<GooglePhotosPickingSession> createSession({int? maxItemCount}) async {
+    return GooglePhotosPickingSession(
+      id: 'abc',
+      pickerUri: Uri.parse('https://photos.google.com/picker/abc'),
+      mediaItemsSet: false,
+      pollingConfig: const GooglePhotosPollingConfig(
+        pollInterval: Duration.zero,
+        timeoutIn: Duration(seconds: 5),
+      ),
+    );
+  }
+
+  @override
+  Future<GooglePhotosPickingSession> getSession(String sessionId) async {
+    pollCount++;
+    if (pollCount == 1) {
+      throw http.ClientException('Temporary DNS failure');
+    }
+    return GooglePhotosPickingSession(
+      id: sessionId,
+      pickerUri: Uri.parse('https://photos.google.com/picker/$sessionId'),
+      mediaItemsSet: true,
+    );
   }
 }

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
 import 'google_photos_models.dart';
@@ -159,7 +160,17 @@ class _GooglePhotosPickerScreenState extends State<GooglePhotosPickerScreen> {
           session.pollingConfig?.pollInterval ?? const Duration(seconds: 2),
         );
         if (_cancelled) return;
-        session = await widget.service.getSession(sessionId);
+        try {
+          session = await widget.service.getSession(sessionId);
+          if (mounted && _status != 'Waiting for your selection…') {
+            setState(() => _status = 'Waiting for your selection…');
+          }
+        } on Object catch (error) {
+          if (!_isRetryablePollError(error)) rethrow;
+          if (mounted && _status != 'Connection interrupted. Retrying…') {
+            setState(() => _status = 'Connection interrupted. Retrying…');
+          }
+        }
       }
 
       final List<GooglePhotosMediaItem> items = await widget.service
@@ -249,5 +260,19 @@ class _GooglePhotosPickerScreenState extends State<GooglePhotosPickerScreen> {
     }
     if (error is TimeoutException) return error.message ?? 'Session timed out.';
     return 'Please check your connection and Google Photos API configuration.';
+  }
+
+  bool _isRetryablePollError(Object error) {
+    if (error is SocketException ||
+        error is http.ClientException ||
+        error is TimeoutException) {
+      return true;
+    }
+    if (error case GooglePhotosApiException(:final int? statusCode)) {
+      return statusCode == 408 ||
+          statusCode == 429 ||
+          (statusCode != null && statusCode >= 500);
+    }
+    return false;
   }
 }
