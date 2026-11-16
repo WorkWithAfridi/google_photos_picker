@@ -1,5 +1,7 @@
 # Google Photos Picker
 
+![Google Photos Picker for Flutter](doc/images/google-photos-picker-cover.png)
+
 `google_photos_picker` is a Flutter picker for selecting and downloading photos
 and videos through the official Google Photos Picker API.
 
@@ -21,6 +23,35 @@ Photos library.
 - Typed models and service errors
 - Proactive picking-session and HTTP client cleanup
 - Host light/dark theme inheritance
+
+## Preview
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="doc/images/picker-preparing.jpg" alt="Preparing a secure Google Photos picker session" width="280" />
+      <br />
+      <sub>Secure session preparation</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="doc/images/google-photos-selection.png" alt="Selecting media in the Google-hosted Photos picker" width="280" />
+      <br />
+      <sub>Google-hosted media selection</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="doc/images/picker-downloading.jpg" alt="Downloading selected Google Photos media with progress" width="280" />
+      <br />
+      <sub>Automatic return and download progress</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="doc/images/picker-complete.png" alt="Downloaded Google Photos media in the example application" width="280" />
+      <br />
+      <sub>Downloaded media ready for the app</sub>
+    </td>
+  </tr>
+</table>
 
 ## Requirements
 
