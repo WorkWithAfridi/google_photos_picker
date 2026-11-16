@@ -13,6 +13,8 @@ void main() {
     final _ReadyService service = _ReadyService();
     Uri? launchedUri;
     int closeCount = 0;
+    int monitorStartCount = 0;
+    int monitorStopCount = 0;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -33,6 +35,12 @@ void main() {
                               return true;
                             },
                             uriCloser: () async => closeCount++,
+                            sessionMonitorStarter: (_) async {
+                              monitorStartCount++;
+                            },
+                            sessionMonitorStopper: () async {
+                              monitorStopCount++;
+                            },
                           ),
                     ),
                   );
@@ -53,6 +61,8 @@ void main() {
     expect(service.maxItemCount, 3);
     expect(service.deletedSession, 'abc');
     expect(closeCount, 1);
+    expect(monitorStartCount, 1);
+    expect(monitorStopCount, 1);
     expect(find.text('Open'), findsOneWidget);
   });
 
@@ -72,6 +82,78 @@ void main() {
     expect(find.text('Couldn’t open Google Photos'), findsOneWidget);
     expect(find.text('Picker API is disabled.'), findsOneWidget);
     expect(find.text('Try again'), findsOneWidget);
+  });
+
+  testWidgets('returns a completed result when session cleanup fails', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder:
+              (BuildContext context) => FilledButton(
+                onPressed: () {
+                  Navigator.of(context).push<List<File>>(
+                    MaterialPageRoute<List<File>>(
+                      builder:
+                          (_) => GooglePhotosPickerScreen(
+                            service: _FailingCleanupService(),
+                            uriLauncher: (_) async => true,
+                            uriCloser: () async {},
+                          ),
+                    ),
+                  );
+                },
+                child: const Text('Open'),
+              ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Open'), findsOneWidget);
+    expect(find.text('Couldn’t open Google Photos'), findsNothing);
+  });
+
+  testWidgets('hides the reopen action while downloading', (
+    WidgetTester tester,
+  ) async {
+    final _DownloadingService service = _DownloadingService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder:
+              (BuildContext context) => FilledButton(
+                onPressed: () {
+                  Navigator.of(context).push<List<File>>(
+                    MaterialPageRoute<List<File>>(
+                      builder:
+                          (_) => GooglePhotosPickerScreen(
+                            service: service,
+                            uriLauncher: (_) async => true,
+                            uriCloser: () async {},
+                          ),
+                    ),
+                  );
+                },
+                child: const Text('Open'),
+              ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Downloading selected media'), findsOneWidget);
+    expect(find.text('0 of 1'), findsOneWidget);
+    expect(find.text('Open Google Photos again'), findsNothing);
+
+    service.download.complete(File('downloaded.jpg'));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('keeps polling after a transient network failure', (
@@ -155,6 +237,38 @@ class _FailingService extends _ReadyService {
   @override
   Future<GooglePhotosPickingSession> createSession({int? maxItemCount}) {
     throw const GooglePhotosApiException('Picker API is disabled.');
+  }
+}
+
+class _FailingCleanupService extends _ReadyService {
+  @override
+  Future<void> deleteSession(String sessionId) {
+    throw const GooglePhotosApiException('Cleanup failed.', statusCode: 500);
+  }
+}
+
+class _DownloadingService extends _ReadyService {
+  final Completer<File> download = Completer<File>();
+
+  @override
+  Future<List<GooglePhotosMediaItem>> listMediaItems(String sessionId) async {
+    return <GooglePhotosMediaItem>[
+      GooglePhotosMediaItem(
+        id: 'photo-1',
+        type: GooglePhotosMediaType.photo,
+        baseUrl: Uri.parse('https://example.com/photo-1'),
+        filename: 'photo-1.jpg',
+        mimeType: 'image/jpeg',
+      ),
+    ];
+  }
+
+  @override
+  Future<File> downloadMediaItem(
+    GooglePhotosMediaItem item, {
+    Directory? directory,
+  }) {
+    return download.future;
   }
 }
 

@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 
+import 'google_photos_models.dart';
 import 'google_photos_picker_options.dart';
+import 'google_photos_platform.dart';
 import 'google_photos_picker_screen.dart';
 import 'google_photos_service.dart';
 
@@ -98,6 +100,24 @@ class GooglePhotosPicker {
               (BuildContext context) => GooglePhotosPickerScreen(
                 service: GooglePhotosApiService(client),
                 options: options,
+                sessionMonitorStarter:
+                    Platform.isAndroid
+                        ? (GooglePhotosPickingSession session) =>
+                            GooglePhotosPlatform.startSessionMonitor(
+                              sessionId: session.id,
+                              headers: headers,
+                              pollInterval:
+                                  session.pollingConfig?.pollInterval ??
+                                  const Duration(seconds: 2),
+                              timeout:
+                                  session.pollingConfig?.timeoutIn ??
+                                  const Duration(minutes: 10),
+                            )
+                        : null,
+                sessionMonitorStopper:
+                    Platform.isAndroid
+                        ? GooglePhotosPlatform.stopSessionMonitor
+                        : null,
               ),
         ),
       );

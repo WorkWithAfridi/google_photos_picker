@@ -35,6 +35,11 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.workwithafridi.google_photos_picker
+        pluginClass: GooglePhotosPickerPlugin
 
   # To add assets to your package, add an assets section, like this:
   # assets:
