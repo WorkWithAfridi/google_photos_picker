@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
@@ -62,6 +61,13 @@ class GooglePhotosApiService implements GooglePhotosService {
 
   @override
   Future<GooglePhotosPickingSession> createSession({int? maxItemCount}) async {
+    if (maxItemCount != null && (maxItemCount < 1 || maxItemCount > 2000)) {
+      throw ArgumentError.value(
+        maxItemCount,
+        'maxItemCount',
+        'must be between 1 and 2000',
+      );
+    }
     final Map<String, Object?> body = <String, Object?>{};
     if (maxItemCount != null) {
       body['pickingConfig'] = <String, String>{
@@ -128,19 +134,28 @@ class GooglePhotosApiService implements GooglePhotosService {
             ? 'dv'
             : 'd';
     final Uri downloadUri = Uri.parse('${item.baseUrl}=$suffix');
-    final http.Response response = await _client.get(downloadUri);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw _exceptionFor(response);
-    }
-
     final Directory destination = directory ?? await getTemporaryDirectory();
     await destination.create(recursive: true);
     final String safeName = _safeFilename(item.filename);
     final File output = await _availableFile(destination, safeName);
-    return output.writeAsBytes(
-      Uint8List.fromList(response.bodyBytes),
-      flush: true,
+    final http.StreamedResponse response = await _client.send(
+      http.Request('GET', downloadUri),
     );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw _exceptionFor(await http.Response.fromStream(response));
+    }
+
+    final IOSink sink = output.openWrite();
+    try {
+      await sink.addStream(response.stream);
+      await sink.flush();
+      await sink.close();
+      return output;
+    } on Object {
+      await sink.close();
+      if (await output.exists()) await output.delete();
+      rethrow;
+    }
   }
 
   @override

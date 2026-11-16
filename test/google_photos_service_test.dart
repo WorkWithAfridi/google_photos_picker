@@ -34,6 +34,17 @@ void main() {
     expect(session.id, 'session-1');
   });
 
+  test('rejects invalid selection limits before making a request', () async {
+    final GooglePhotosApiService service = GooglePhotosApiService(
+      MockClient((_) async => throw StateError('Request should not be sent.')),
+    );
+
+    await expectLater(
+      service.createSession(maxItemCount: 2001),
+      throwsArgumentError,
+    );
+  });
+
   test('paginates selected media items', () async {
     final GooglePhotosApiService service = GooglePhotosApiService(
       MockClient((http.Request request) async {
