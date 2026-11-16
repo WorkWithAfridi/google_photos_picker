@@ -69,7 +69,7 @@ The current API returns a `dart:io` `File`; web is not supported.
 
 ```yaml
 dependencies:
-  google_photos_picker: ^0.1.0
+  google_photos_picker: ^1.0.0
 ```
 
 Then run:

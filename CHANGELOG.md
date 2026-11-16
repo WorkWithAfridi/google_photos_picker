@@ -1,3 +1,11 @@
+## 1.0.0
+
+- Stabilize the Google Photos Picker API after initial testing.
+- Automatically return to the app after selection on Android and iOS.
+- Add resilient session polling, streamed media downloads, and best-effort
+  session cleanup.
+- Document Android, iOS, and macOS setup, OAuth configuration, and usage.
+
 ## 0.1.0
 
 - Initial Google Photos Picker API integration.

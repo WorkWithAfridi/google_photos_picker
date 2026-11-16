@@ -1,6 +1,6 @@
 name: google_photos_picker
 description: A Flutter picker for selecting and downloading photos and videos from Google Photos.
-version: 0.1.0
+version: 1.0.0
 homepage: https://github.com/WorkWithAfridi/google_photos_picker
 repository: https://github.com/WorkWithAfridi/google_photos_picker
 issue_tracker: https://github.com/WorkWithAfridi/google_photos_picker/issues
