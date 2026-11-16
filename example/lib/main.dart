@@ -78,8 +78,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Google’s hosted picker opens outside this app. Your explicit '
-            'selection is then downloaded to temporary storage.',
+            'Google’s hosted picker opens in a secure browser view. Your '
+            'explicit selection is then downloaded to temporary storage.',
           ),
           const SizedBox(height: 24),
           FilledButton.icon(

@@ -227,7 +227,7 @@ class _GooglePhotosPickerScreenState extends State<GooglePhotosPickerScreen> {
   Future<bool> _launch(Uri uri) {
     final GooglePhotosUriLauncher? launcher = widget.uriLauncher;
     if (launcher != null) return launcher(uri);
-    return launchUrl(uri, mode: LaunchMode.externalApplication);
+    return launchUrl(uri, mode: LaunchMode.inAppBrowserView);
   }
 
   Uri _autocloseUri(Uri uri) {
