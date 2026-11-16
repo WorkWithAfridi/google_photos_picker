@@ -173,7 +173,9 @@ class _GooglePhotosPickerScreenState extends State<GooglePhotosPickerScreen> {
         );
         if (_cancelled) return;
         try {
-          session = await widget.service.getSession(sessionId);
+          session = await widget.service
+              .getSession(sessionId)
+              .timeout(const Duration(seconds: 8));
           if (mounted && _status != 'Waiting for your selection…') {
             setState(() => _status = 'Waiting for your selection…');
           }

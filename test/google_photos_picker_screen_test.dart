@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -93,6 +94,27 @@ void main() {
     expect(service.deletedSession, 'abc');
     expect(find.text('Couldn’t open Google Photos'), findsNothing);
   });
+
+  testWidgets('retries when a background poll hangs', (
+    WidgetTester tester,
+  ) async {
+    final _HangingPollingService service = _HangingPollingService();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GooglePhotosPickerScreen(
+          service: service,
+          uriLauncher: (_) async => true,
+          uriCloser: () async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(service.pollCount, 2);
+    expect(service.deletedSession, 'abc');
+    expect(find.text('Couldn’t open Google Photos'), findsNothing);
+  });
 }
 
 class _ReadyService implements GooglePhotosService {
@@ -159,5 +181,18 @@ class _TransientPollingService extends _ReadyService {
       throw http.ClientException('Temporary DNS failure');
     }
     return GooglePhotosPickingSession(id: sessionId, mediaItemsSet: true);
+  }
+}
+
+class _HangingPollingService extends _TransientPollingService {
+  @override
+  Future<GooglePhotosPickingSession> getSession(String sessionId) {
+    pollCount++;
+    if (pollCount == 1) {
+      return Completer<GooglePhotosPickingSession>().future;
+    }
+    return Future<GooglePhotosPickingSession>.value(
+      GooglePhotosPickingSession(id: sessionId, mediaItemsSet: true),
+    );
   }
 }
