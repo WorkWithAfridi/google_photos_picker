@@ -10,7 +10,8 @@ Photos library.
 ## Features
 
 - Least-privilege Google Photos Picker OAuth authorization
-- Google-hosted photo and video selection in a secure in-app browser view
+- Google-hosted photo and video selection in a managed in-app browser view
+- Automatic picker dismissal on Android and iOS when selection is complete
 - Trigger-defined single or multiple selection with a maximum count
 - API-recommended polling intervals and session timeouts
 - Paginated selected-media retrieval

@@ -1,15 +1,17 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter_custom_tabs/flutter_custom_tabs.dart' as custom_tabs;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:url_launcher/url_launcher.dart';
+import 'package:url_launcher/url_launcher.dart' as url_launcher;
 
 import 'google_photos_models.dart';
 import 'google_photos_picker_options.dart';
 import 'google_photos_service.dart';
 
 typedef GooglePhotosUriLauncher = Future<bool> Function(Uri uri);
+typedef GooglePhotosUriCloser = Future<void> Function();
 
 /// Progress UI shown while the user selects media in Google Photos.
 class GooglePhotosPickerScreen extends StatefulWidget {
@@ -18,11 +20,13 @@ class GooglePhotosPickerScreen extends StatefulWidget {
     required this.service,
     this.options = const GooglePhotosPickerOptions(),
     this.uriLauncher,
+    this.uriCloser,
   });
 
   final GooglePhotosService service;
   final GooglePhotosPickerOptions options;
   final GooglePhotosUriLauncher? uriLauncher;
+  final GooglePhotosUriCloser? uriCloser;
 
   @override
   State<GooglePhotosPickerScreen> createState() =>
@@ -35,6 +39,7 @@ class _GooglePhotosPickerScreenState extends State<GooglePhotosPickerScreen> {
   Uri? _pickerUri;
   bool _cancelled = false;
   bool _allowPop = false;
+  bool _pickerOpen = false;
   Future<void>? _flow;
   int _downloaded = 0;
   int _downloadTotal = 0;
@@ -150,6 +155,7 @@ class _GooglePhotosPickerScreenState extends State<GooglePhotosPickerScreen> {
           'No application could open the Google Photos picker.',
         );
       }
+      _pickerOpen = true;
 
       GooglePhotosPickingSession session = initial;
       final Duration timeout =
@@ -178,6 +184,8 @@ class _GooglePhotosPickerScreenState extends State<GooglePhotosPickerScreen> {
           }
         }
       }
+
+      await _closePicker();
 
       final List<GooglePhotosMediaItem> items = await widget.service
           .listMediaItems(sessionId);
@@ -208,6 +216,7 @@ class _GooglePhotosPickerScreenState extends State<GooglePhotosPickerScreen> {
         Navigator.of(context).pop(files);
       }
     } on Object catch (error, stackTrace) {
+      await _closePicker();
       debugPrint('Google Photos picker failed: $error');
       debugPrintStack(stackTrace: stackTrace);
       if (mounted && !_cancelled) {
@@ -224,10 +233,50 @@ class _GooglePhotosPickerScreenState extends State<GooglePhotosPickerScreen> {
     }
   }
 
-  Future<bool> _launch(Uri uri) {
+  Future<bool> _launch(Uri uri) async {
     final GooglePhotosUriLauncher? launcher = widget.uriLauncher;
     if (launcher != null) return launcher(uri);
-    return launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      return url_launcher.launchUrl(
+        uri,
+        mode: url_launcher.LaunchMode.externalApplication,
+      );
+    }
+    try {
+      await custom_tabs.launchUrl(
+        uri,
+        prefersDeepLink: false,
+        customTabsOptions: custom_tabs.CustomTabsOptions(
+          showTitle: true,
+          closeButton: custom_tabs.CustomTabsCloseButton(
+            icon: custom_tabs.CustomTabsCloseButtonIcons.back,
+          ),
+        ),
+        safariVCOptions: const custom_tabs.SafariViewControllerOptions(
+          dismissButtonStyle:
+              custom_tabs.SafariViewControllerDismissButtonStyle.close,
+        ),
+      );
+      return true;
+    } on Object catch (error) {
+      debugPrint('Could not launch Google Photos picker: $error');
+      return false;
+    }
+  }
+
+  Future<void> _closePicker() async {
+    if (!_pickerOpen) return;
+    _pickerOpen = false;
+    try {
+      final GooglePhotosUriCloser? closer = widget.uriCloser;
+      if (closer != null) {
+        await closer();
+      } else if (Platform.isAndroid || Platform.isIOS) {
+        await custom_tabs.closeCustomTabs();
+      }
+    } on Object catch (error) {
+      debugPrint('Could not close Google Photos picker: $error');
+    }
   }
 
   Uri _autocloseUri(Uri uri) {
@@ -243,7 +292,7 @@ class _GooglePhotosPickerScreenState extends State<GooglePhotosPickerScreen> {
 
   Future<void> _openPicker() async {
     final Uri? uri = _pickerUri;
-    if (uri != null) await _launch(uri);
+    if (uri != null && await _launch(uri)) _pickerOpen = true;
   }
 
   void _retry() {
@@ -264,6 +313,7 @@ class _GooglePhotosPickerScreenState extends State<GooglePhotosPickerScreen> {
       _cancelled = true;
       _status = 'Closing Google Photos…';
     });
+    await _closePicker();
     await _flow;
     if (mounted) {
       _allowPop = true;

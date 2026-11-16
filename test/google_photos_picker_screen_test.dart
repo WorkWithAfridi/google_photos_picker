@@ -11,6 +11,7 @@ void main() {
   ) async {
     final _ReadyService service = _ReadyService();
     Uri? launchedUri;
+    int closeCount = 0;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -30,6 +31,7 @@ void main() {
                               launchedUri = uri;
                               return true;
                             },
+                            uriCloser: () async => closeCount++,
                           ),
                     ),
                   );
@@ -49,6 +51,7 @@ void main() {
     );
     expect(service.maxItemCount, 3);
     expect(service.deletedSession, 'abc');
+    expect(closeCount, 1);
     expect(find.text('Open'), findsOneWidget);
   });
 
@@ -80,6 +83,7 @@ void main() {
         home: GooglePhotosPickerScreen(
           service: service,
           uriLauncher: (_) async => true,
+          uriCloser: () async {},
         ),
       ),
     );
